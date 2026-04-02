@@ -1,19 +1,27 @@
 'use client';
 
+import { useState } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import ClaimForm from './claim-form';
+import ClaimList from './claim-list';
 
 export default function Dashboard() {
   const { user, logout } = useAuth();
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const handleRefresh = () => {
+    setRefreshKey((prev) => prev + 1);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm">
+      <header className="bg-white shadow-sm sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
           <h1 className="text-xl font-bold">ClaimNote</h1>
           <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-600">{user?.email}</span>
+            <span className="text-sm text-gray-600 hidden sm:inline">{user?.email}</span>
             <Button variant="outline" onClick={logout} size="sm">
               ログアウト
             </Button>
@@ -21,44 +29,22 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-6">
-        <div className="grid gap-4 md:grid-cols-3 mb-6">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">未対応</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold">0</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">対応中</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold">0</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">今月完了</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold">0</p>
-            </CardContent>
-          </Card>
-        </div>
+      <main className="max-w-3xl mx-auto px-4 py-6">
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>クレーム管理</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ClaimForm onSuccess={handleRefresh} />
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader>
             <CardTitle>クレーム一覧</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-gray-500 text-center py-8">
-              クレームがまだ登録されていません。<br />
-              「新規登録」ボタンから追加してください。
-            </p>
-            <Button className="w-full">新規クレーム登録</Button>
+            <ClaimList key={refreshKey} />
           </CardContent>
         </Card>
       </main>
