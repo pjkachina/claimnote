@@ -2,8 +2,7 @@
 
 import { useState } from 'react';
 import { useAuth } from '@/lib/auth-context';
-import { db } from '@/lib/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -35,7 +34,7 @@ export default function ClaimForm({ onSuccess }: ClaimFormProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    tenantName: '',
+    tenant_name: '',
     category: '',
     priority: 'normal',
     content: '',
@@ -47,13 +46,15 @@ export default function ClaimForm({ onSuccess }: ClaimFormProps) {
 
     setLoading(true);
     try {
-      await addDoc(collection(db, 'users', user.uid, 'claims'), {
+      const { error } = await supabase.from('claims').insert({
+        user_id: user.id,
         ...formData,
         status: 'pending',
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
       });
-      setFormData({ tenantName: '', category: '', priority: 'normal', content: '' });
+      
+      if (error) throw error;
+      
+      setFormData({ tenant_name: '', category: '', priority: 'normal', content: '' });
       setOpen(false);
       onSuccess?.();
     } catch (error) {
@@ -74,11 +75,11 @@ export default function ClaimForm({ onSuccess }: ClaimFormProps) {
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="tenantName">テナント名 / 部屋番号</Label>
+            <Label htmlFor="tenant_name">テナント名 / 部屋番号</Label>
             <Input
-              id="tenantName"
-              value={formData.tenantName}
-              onChange={(e) => setFormData({ ...formData, tenantName: e.target.value })}
+              id="tenant_name"
+              value={formData.tenant_name}
+              onChange={(e) => setFormData({ ...formData, tenant_name: e.target.value })}
               placeholder="例：山田さん 101号室"
               required
             />

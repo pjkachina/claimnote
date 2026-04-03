@@ -2,21 +2,19 @@
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/auth-context';
-import { db } from '@/lib/firebase';
-import { collection, query, orderBy, onSnapshot, updateDoc, doc } from 'firebase/firestore';
+import { supabase } from '@/lib/supabase';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 
 interface Claim {
   id: string;
-  tenantName: string;
+  tenant_name: string;
   category: string;
   priority: string;
   content: string;
   status: 'pending' | 'in_progress' | 'completed';
-  createdAt: any;
+  created_at: string;
 }
 
 const categoryLabels: Record<string, string> = {
@@ -67,34 +65,52 @@ export default function ClaimList({ onRefresh }: ClaimListProps) {
   useEffect(() => {
     if (!user) return;
 
-    const q = query(
-      collection(db, 'users', user.uid, 'claims'),
-      orderBy('createdAt', 'desc')
-    );
+    fetchClaims();
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const claimsData: Claim[] = [];
-      snapshot.forEach((doc) => {
-        claimsData.push({ id: doc.id, ...doc.data() } as Claim);
-      });
-      setClaims(claimsData);
+    // Subscribe to realtime changes
+    const subscription = supabase
+      .channel('claims_changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'claims', filter: `user_id=eq.${user.id}` },
+        () => fetchClaims()
+      )
+      .subscribe();
+
+    return () => subscription.unsubscribe();
+  }, [user]);
+
+  const fetchClaims = async () => {
+    if (!user) return;
+    
+    const { data, error } = await supabase
+      .from('claims')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error('Error fetching claims:', error);
+    } else {
+      setClaims(data || []);
       setLoading(false);
       onRefresh?.();
-    });
-
-    return unsubscribe;
-  }, [user, onRefresh]);
+    }
+  };
 
   const updateStatus = async (claimId: string, newStatus: string) => {
-    if (!user) return;
-    await updateDoc(doc(db, 'users', user.uid, 'claims', claimId), {
-      status: newStatus,
-    });
+    const { error } = await supabase
+      .from('claims')
+      .update({ status: newStatus })
+      .eq('id', claimId);
+    
+    if (error) {
+      console.error('Error updating status:', error);
+    }
   };
 
   const filteredClaims = claims.filter((claim) => {
     const matchesSearch = 
-      claim.tenantName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      claim.tenant_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       claim.content.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || claim.status === statusFilter;
     return matchesSearch && matchesStatus;
@@ -157,7 +173,7 @@ export default function ClaimList({ onRefresh }: ClaimListProps) {
             <div key={claim.id} className="border rounded-lg p-4 space-y-2">
               <div className="flex justify-between items-start">
                 <div>
-                  <h3 className="font-semibold">{claim.tenantName}</h3>
+                  <h3 className="font-semibold">{claim.tenant_name}</h3>
                   <p className="text-sm text-gray-500">
                     {categoryLabels[claim.category]} · {priorityLabels[claim.priority]}
                   </p>
