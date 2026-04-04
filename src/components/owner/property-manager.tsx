@@ -150,19 +150,43 @@ export default function PropertyManager({ onRefresh }: PropertyManagerProps) {
       return;
     }
 
-    const { error } = await supabase.from('units').insert({
-      property_id: addingUnitToPropertyId,
-      unit_number: newUnitNumber.trim(),
-    });
+    const unitNumber = newUnitNumber.trim();
 
-    if (error) {
-      console.error('Error adding unit:', error);
-      alert('部屋の追加に失敗しました: ' + error.message);
-    } else {
+    try {
+      const { data, error } = await supabase
+        .from('units')
+        .insert({
+          property_id: addingUnitToPropertyId,
+          unit_number: unitNumber,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error adding unit:', error);
+        alert('部屋の追加に失敗しました: ' + error.message);
+        return;
+      }
+
+      // 即座にUIに反映（楽観的更新）
+      setUnits((prev) => ({
+        ...prev,
+        [addingUnitToPropertyId]: [
+          ...(prev[addingUnitToPropertyId] || []),
+          data,
+        ],
+      }));
+
       setNewUnitNumber('');
       setAddingUnitToPropertyId(null);
-      fetchUnits(addingUnitToPropertyId);
+      
+      // バックグラウンドで最新データを取得
+      await fetchUnits(addingUnitToPropertyId);
       onRefresh?.();
+      
+    } catch (err) {
+      console.error('Exception adding unit:', err);
+      alert('部屋の追加中にエラーが発生しました');
     }
   };
 
@@ -231,14 +255,15 @@ export default function PropertyManager({ onRefresh }: PropertyManagerProps) {
 
   return (
     <div className="space-y-4">
-      {/* 物件追加ボタン */}
-      <Dialog open={isAddPropertyOpen} onOpenChange={setIsAddPropertyOpen}>
-        <DialogTrigger>
-          <Button className="w-full">
-            <Plus className="mr-2 h-4 w-4" />
-            物件を追加
-          </Button>
-        </DialogTrigger>
+      {/* 物件追加ボタンとリロードボタン */}
+      <div className="flex gap-2">
+        <Dialog open={isAddPropertyOpen} onOpenChange={setIsAddPropertyOpen}>
+          <DialogTrigger>
+            <Button className="flex-1">
+              <Plus className="mr-2 h-4 w-4" />
+              物件を追加
+            </Button>
+          </DialogTrigger>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>新規物件を追加</DialogTitle>
@@ -268,6 +293,19 @@ export default function PropertyManager({ onRefresh }: PropertyManagerProps) {
           </div>
         </DialogContent>
       </Dialog>
+        <Button 
+          variant="outline" 
+          onClick={() => {
+            fetchProperties();
+            if (expandedProperty) {
+              fetchUnits(expandedProperty);
+            }
+          }}
+          disabled={loading}
+        >
+          更新
+        </Button>
+      </div>
 
       {/* 物件一覧 */}
       {properties.length === 0 ? (
