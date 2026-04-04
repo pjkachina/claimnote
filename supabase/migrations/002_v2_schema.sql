@@ -54,7 +54,66 @@ CREATE TABLE IF NOT EXISTS units (
   UNIQUE (property_id, unit_number)
 );
 
--- unitsテーブルのRLSを有効化
+-- ============================================
+-- 4. tenant_assignments（テナント紐付け）
+-- ============================================
+CREATE TABLE IF NOT EXISTS tenant_assignments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  unit_id UUID NOT NULL REFERENCES units(id) ON DELETE CASCADE,
+  tenant_id UUID NOT NULL REFERENCES profiles(id),
+  assigned_at TIMESTAMPTZ DEFAULT now(),
+  is_active BOOLEAN DEFAULT true,
+  UNIQUE (unit_id, tenant_id)
+);
+
+-- ============================================
+-- 5. invitations（招待トークン）
+-- ============================================
+CREATE TABLE IF NOT EXISTS invitations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  unit_id UUID NOT NULL REFERENCES units(id) ON DELETE CASCADE,
+  token TEXT NOT NULL UNIQUE DEFAULT encode(gen_random_bytes(32), 'hex'),
+  created_by UUID NOT NULL REFERENCES profiles(id),
+  used_by UUID REFERENCES profiles(id),
+  expires_at TIMESTAMPTZ DEFAULT (now() + interval '7 days'),
+  used_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- ============================================
+-- 6. claims（クレーム/チケット）
+-- ============================================
+
+-- 既存のclaimsテーブルがあれば削除（v1からの移行）
+DROP TABLE IF EXISTS claims CASCADE;
+
+CREATE TABLE claims (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  unit_id UUID NOT NULL REFERENCES units(id),
+  submitted_by UUID NOT NULL REFERENCES profiles(id),
+  category TEXT NOT NULL CHECK (category IN ('water', 'electric', 'equipment', 'noise', 'other')),
+  priority TEXT NOT NULL DEFAULT 'normal' CHECK (priority IN ('urgent', 'high', 'normal', 'low')),
+  title TEXT NOT NULL,
+  content TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'in_progress', 'completed')),
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- ============================================
+-- 7. claim_comments（コメント）
+-- ============================================
+CREATE TABLE IF NOT EXISTS claim_comments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  claim_id UUID NOT NULL REFERENCES claims(id) ON DELETE CASCADE,
+  author_id UUID NOT NULL REFERENCES profiles(id),
+  content TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- ============================================
+-- RLSポリシー（units - tenant_assignments作成後に設定）
+-- ============================================
 ALTER TABLE units ENABLE ROW LEVEL SECURITY;
 
 -- unitsのRLSポリシー（オーナー: 自分の物件の部屋のみ）
@@ -79,18 +138,8 @@ CREATE POLICY "units_tenant_select" ON units
   );
 
 -- ============================================
--- 4. tenant_assignments（テナント紐付け）
+-- RLSポリシー（tenant_assignments）
 -- ============================================
-CREATE TABLE IF NOT EXISTS tenant_assignments (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  unit_id UUID NOT NULL REFERENCES units(id) ON DELETE CASCADE,
-  tenant_id UUID NOT NULL REFERENCES profiles(id),
-  assigned_at TIMESTAMPTZ DEFAULT now(),
-  is_active BOOLEAN DEFAULT true,
-  UNIQUE (unit_id, tenant_id)
-);
-
--- tenant_assignmentsテーブルのRLSを有効化
 ALTER TABLE tenant_assignments ENABLE ROW LEVEL SECURITY;
 
 -- tenant_assignmentsのRLSポリシー（オーナー: 自分の物件のテナントのみ）
@@ -109,20 +158,8 @@ CREATE POLICY "tenant_assignments_tenant_select" ON tenant_assignments
   FOR SELECT USING (tenant_id = auth.uid());
 
 -- ============================================
--- 5. invitations（招待トークン）
+-- RLSポリシー（invitations）
 -- ============================================
-CREATE TABLE IF NOT EXISTS invitations (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  unit_id UUID NOT NULL REFERENCES units(id) ON DELETE CASCADE,
-  token TEXT NOT NULL UNIQUE DEFAULT encode(gen_random_bytes(32), 'hex'),
-  created_by UUID NOT NULL REFERENCES profiles(id),
-  used_by UUID REFERENCES profiles(id),
-  expires_at TIMESTAMPTZ DEFAULT (now() + interval '7 days'),
-  used_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ DEFAULT now()
-);
-
--- invitationsテーブルのRLSを有効化
 ALTER TABLE invitations ENABLE ROW LEVEL SECURITY;
 
 -- invitationsのRLSポリシー（オーナー: 自分が作成した招待のみ）
@@ -134,26 +171,8 @@ CREATE POLICY "invitations_select_by_token" ON invitations
   FOR SELECT USING (true);
 
 -- ============================================
--- 6. claims（クレーム/チケット）
+-- RLSポリシー（claims）
 -- ============================================
-
--- 既存のclaimsテーブルがあれば削除（v1からの移行）
-DROP TABLE IF EXISTS claims CASCADE;
-
-CREATE TABLE claims (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  unit_id UUID NOT NULL REFERENCES units(id),
-  submitted_by UUID NOT NULL REFERENCES profiles(id),
-  category TEXT NOT NULL CHECK (category IN ('water', 'electric', 'equipment', 'noise', 'other')),
-  priority TEXT NOT NULL DEFAULT 'normal' CHECK (priority IN ('urgent', 'high', 'normal', 'low')),
-  title TEXT NOT NULL,
-  content TEXT NOT NULL,
-  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'in_progress', 'completed')),
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
-);
-
--- claimsテーブルのRLSを有効化
 ALTER TABLE claims ENABLE ROW LEVEL SECURITY;
 
 -- claimsのRLSポリシー（テナント: 自分の部屋のクレームのみ）
@@ -189,17 +208,8 @@ CREATE POLICY "claims_owner_update" ON claims
   );
 
 -- ============================================
--- 7. claim_comments（コメント）
+-- RLSポリシー（claim_comments）
 -- ============================================
-CREATE TABLE IF NOT EXISTS claim_comments (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  claim_id UUID NOT NULL REFERENCES claims(id) ON DELETE CASCADE,
-  author_id UUID NOT NULL REFERENCES profiles(id),
-  content TEXT NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT now()
-);
-
--- claim_commentsテーブルのRLSを有効化
 ALTER TABLE claim_comments ENABLE ROW LEVEL SECURITY;
 
 -- claim_commentsのRLSポリシー（該当claimにアクセス権があるユーザー）
