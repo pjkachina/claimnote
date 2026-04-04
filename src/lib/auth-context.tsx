@@ -46,6 +46,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signup = async (email: string, password: string) => {
     const { error } = await supabase.auth.signUp({ email, password });
     if (error) throw error;
+    // 登録後すぐにログイン
+    const { error: loginError } = await supabase.auth.signInWithPassword({ email, password });
+    if (loginError) throw loginError;
   };
 
   const logout = async () => {

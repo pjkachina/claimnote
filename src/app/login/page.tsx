@@ -24,7 +24,7 @@ export default function LoginPage() {
     try {
       if (isSignup) {
         await signup(email, password);
-        setSuccess('確認メールを送信しました。メールボックスをご確認ください。確認後にログインできます。');
+        // 登録後すぐログインされるのでそのままダッシュボードへ
       } else {
         await login(email, password);
       }
