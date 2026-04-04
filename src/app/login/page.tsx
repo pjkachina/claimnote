@@ -12,19 +12,35 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [isSignup, setIsSignup] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [loading, setLoading] = useState(false);
   const { login, signup } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
+    setLoading(true);
     try {
       if (isSignup) {
         await signup(email, password);
+        setSuccess('確認メールを送信しました。メールボックスをご確認ください。確認後にログインできます。');
       } else {
         await login(email, password);
       }
-    } catch (err) {
-      setError('メールアドレスまたはパスワードが正しくありません');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : '';
+      if (message.includes('Email not confirmed')) {
+        setError('メールアドレスの確認が完了していません。届いた確認メールのリンクをクリックしてください。');
+      } else if (message.includes('Invalid login credentials')) {
+        setError('メールアドレスまたはパスワードが正しくありません。');
+      } else if (message.includes('User already registered')) {
+        setError('このメールアドレスはすでに登録されています。ログインしてください。');
+      } else {
+        setError('エラーが発生しました。もう一度お試しください。');
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -60,10 +76,13 @@ export default function LoginPage() {
               />
             </div>
             {error && (
-              <p className="text-sm text-red-600">{error}</p>
+              <p className="text-sm text-red-600 bg-red-50 p-3 rounded">{error}</p>
             )}
-            <Button type="submit" className="w-full">
-              {isSignup ? '新規登録' : 'ログイン'}
+            {success && (
+              <p className="text-sm text-green-700 bg-green-50 p-3 rounded">{success}</p>
+            )}
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? '処理中...' : isSignup ? '新規登録' : 'ログイン'}
             </Button>
           </form>
           <p className="mt-4 text-center text-sm">
