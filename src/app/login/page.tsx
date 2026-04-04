@@ -7,14 +7,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Trash2 } from 'lucide-react';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [displayName, setDisplayName] = useState('');
+  const [role, setRole] = useState<'owner' | 'tenant'>('owner');
   const [isSignup, setIsSignup] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const { login, signup } = useAuth();
 
@@ -33,12 +33,10 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setSuccess('');
     setLoading(true);
     try {
       if (isSignup) {
-        await signup(email, password);
-        // 登録後すぐログインされるのでそのままダッシュボードへ
+        await signup(email, password, role, displayName);
       } else {
         await login(email, password);
       }
@@ -69,6 +67,51 @@ export default function LoginPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* ロール選択（新規登録時のみ表示） */}
+            {isSignup && (
+              <>
+                <div className="space-y-2">
+                  <Label>アカウントタイプ</Label>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant={role === 'owner' ? 'default' : 'outline'}
+                      className="flex-1"
+                      onClick={() => setRole('owner')}
+                    >
+                      物件オーナー
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={role === 'tenant' ? 'default' : 'outline'}
+                      className="flex-1"
+                      onClick={() => setRole('tenant')}
+                    >
+                      テナント
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="displayName">お名前</Label>
+                  <Input
+                    id="displayName"
+                    type="text"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    placeholder={role === 'owner' ? '例：山田不動産' : '例：山田太郎'}
+                    required
+                  />
+                </div>
+
+                {role === 'tenant' && (
+                  <p className="text-sm text-amber-600 bg-amber-50 p-3 rounded">
+                    💡 テナントの方は、オーナーから届いた招待リンクからご登録いただくと、自動的に部屋と紐付けられます。
+                  </p>
+                )}
+              </>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="email">メールアドレス</Label>
               <Input
@@ -91,9 +134,6 @@ export default function LoginPage() {
             </div>
             {error && (
               <p className="text-sm text-red-600 bg-red-50 p-3 rounded">{error}</p>
-            )}
-            {success && (
-              <p className="text-sm text-green-700 bg-green-50 p-3 rounded">{success}</p>
             )}
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? '処理中...' : isSignup ? '新規登録' : 'ログイン'}
