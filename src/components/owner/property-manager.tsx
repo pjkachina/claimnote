@@ -55,8 +55,7 @@ export default function PropertyManager({ onRefresh }: PropertyManagerProps) {
 
   // 新規部屋フォーム
   const [newUnitNumber, setNewUnitNumber] = useState('');
-  const [isAddUnitOpen, setIsAddUnitOpen] = useState(false);
-  const [addingUnitToProperty, setAddingUnitToProperty] = useState<string | null>(null);
+  const [addingUnitToPropertyId, setAddingUnitToPropertyId] = useState<string | null>(null);
 
   // 物件一覧を取得
   const fetchProperties = async () => {
@@ -146,21 +145,23 @@ export default function PropertyManager({ onRefresh }: PropertyManagerProps) {
 
   // 部屋追加
   const addUnit = async () => {
-    if (!addingUnitToProperty || !newUnitNumber.trim()) return;
+    if (!addingUnitToPropertyId || !newUnitNumber.trim()) {
+      alert('部屋番号を入力してください');
+      return;
+    }
 
     const { error } = await supabase.from('units').insert({
-      property_id: addingUnitToProperty,
+      property_id: addingUnitToPropertyId,
       unit_number: newUnitNumber.trim(),
     });
 
     if (error) {
       console.error('Error adding unit:', error);
-      alert('部屋の追加に失敗しました');
+      alert('部屋の追加に失敗しました: ' + error.message);
     } else {
       setNewUnitNumber('');
-      setIsAddUnitOpen(false);
-      setAddingUnitToProperty(null);
-      fetchUnits(addingUnitToProperty);
+      setAddingUnitToPropertyId(null);
+      fetchUnits(addingUnitToPropertyId);
       onRefresh?.();
     }
   };
@@ -316,29 +317,38 @@ export default function PropertyManager({ onRefresh }: PropertyManagerProps) {
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
                       <h4 className="font-medium">部屋一覧</h4>
-                      <Dialog open={isAddUnitOpen} onOpenChange={setIsAddUnitOpen}>
-                        <DialogTrigger>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setAddingUnitToProperty(property.id)}
-                          >
-                            <Plus className="mr-1 h-3 w-3" />
-                            部屋を追加
-                          </Button>
-                        </DialogTrigger>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setAddingUnitToPropertyId(property.id)}
+                      >
+                        <Plus className="mr-1 h-3 w-3" />
+                        部屋を追加
+                      </Button>
+
+                      {/* 部屋追加ダイアログ */}
+                      <Dialog
+                        open={addingUnitToPropertyId === property.id}
+                        onOpenChange={(open) => {
+                          if (!open) {
+                            setAddingUnitToPropertyId(null);
+                            setNewUnitNumber('');
+                          }
+                        }}
+                      >
                         <DialogContent>
                           <DialogHeader>
                             <DialogTitle>新規部屋を追加</DialogTitle>
                           </DialogHeader>
                           <div className="space-y-4 pt-4">
                             <div className="space-y-2">
-                              <Label htmlFor="unitNumber">部屋番号</Label>
+                              <Label htmlFor={`unitNumber-${property.id}`}>部屋番号</Label>
                               <Input
-                                id="unitNumber"
+                                id={`unitNumber-${property.id}`}
                                 value={newUnitNumber}
                                 onChange={(e) => setNewUnitNumber(e.target.value)}
                                 placeholder="例：101号室"
+                                autoFocus
                               />
                             </div>
                             <Button
