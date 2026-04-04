@@ -59,18 +59,32 @@ export default function PropertyManager({ onRefresh }: PropertyManagerProps) {
 
   // 物件一覧を取得
   const fetchProperties = async () => {
-    if (!user) return;
+    if (!user) {
+      console.log('fetchProperties: user is null');
+      return;
+    }
 
-    const { data, error } = await supabase
-      .from('properties')
-      .select('*')
-      .eq('owner_id', user.id)
-      .order('created_at', { ascending: false });
+    console.log('Fetching properties for user:', user.id);
+    setLoading(true);
 
-    if (error) {
-      console.error('Error fetching properties:', error);
-    } else {
-      setProperties(data || []);
+    try {
+      const { data, error } = await supabase
+        .from('properties')
+        .select('*')
+        .eq('owner_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching properties:', error);
+        alert('物件一覧の取得に失敗しました: ' + error.message);
+      } else {
+        console.log('Fetched properties:', data);
+        setProperties(data || []);
+      }
+    } catch (err) {
+      console.error('Exception fetching properties:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -121,7 +135,11 @@ export default function PropertyManager({ onRefresh }: PropertyManagerProps) {
 
   // 初期データ読み込み
   useEffect(() => {
-    fetchProperties().then(() => setLoading(false));
+    if (user) {
+      fetchProperties();
+    } else {
+      setLoading(false);
+    }
   }, [user]);
 
   // 物件追加
@@ -153,6 +171,11 @@ export default function PropertyManager({ onRefresh }: PropertyManagerProps) {
       return;
     }
 
+    if (!user) {
+      alert('ログインが必要です');
+      return;
+    }
+
     const unitNumber = newUnitNumber.trim();
 
     try {
@@ -161,6 +184,7 @@ export default function PropertyManager({ onRefresh }: PropertyManagerProps) {
         .insert({
           property_id: addingUnitToPropertyId,
           unit_number: unitNumber,
+          owner_id: user.id,  // owner_idを明示的に設定
         })
         .select()
         .single();
