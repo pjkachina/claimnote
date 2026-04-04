@@ -66,7 +66,7 @@ export default function ClaimForm({ onSuccess }: ClaimFormProps) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
+      <DialogTrigger>
         <Button className="w-full">新規クレーム登録</Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
@@ -89,7 +89,7 @@ export default function ClaimForm({ onSuccess }: ClaimFormProps) {
             <Label htmlFor="category">カテゴリ</Label>
             <Select
               value={formData.category}
-              onValueChange={(value) => setFormData({ ...formData, category: value })}
+              onValueChange={(value) => setFormData({ ...formData, category: value || '' })}
               required
             >
               <SelectTrigger>
@@ -109,7 +109,7 @@ export default function ClaimForm({ onSuccess }: ClaimFormProps) {
             <Label htmlFor="priority">優先度</Label>
             <Select
               value={formData.priority}
-              onValueChange={(value) => setFormData({ ...formData, priority: value })}
+              onValueChange={(value) => setFormData({ ...formData, priority: value || 'normal' })}
             >
               <SelectTrigger>
                 <SelectValue />

@@ -76,7 +76,7 @@ export default function ClaimList({ onRefresh }: ClaimListProps) {
       )
       .subscribe();
 
-    return () => subscription.unsubscribe();
+    return () => { subscription.unsubscribe(); };
   }, [user]);
 
   const fetchClaims = async () => {
@@ -150,7 +150,7 @@ export default function ClaimList({ onRefresh }: ClaimListProps) {
           onChange={(e) => setSearchTerm(e.target.value)}
           className="flex-1"
         />
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
+        <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value || 'all')}>
           <SelectTrigger className="w-32">
             <SelectValue />
           </SelectTrigger>
@@ -191,7 +191,7 @@ export default function ClaimList({ onRefresh }: ClaimListProps) {
                 </Badge>
                 <Select
                   value={claim.status}
-                  onValueChange={(value) => updateStatus(claim.id, value)}
+                  onValueChange={(value) => value && updateStatus(claim.id, value)}
                 >
                   <SelectTrigger className="w-32">
                     <SelectValue />
