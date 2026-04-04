@@ -76,6 +76,8 @@ export default function PropertyManager({ onRefresh }: PropertyManagerProps) {
 
   // 部屋一覧を取得
   const fetchUnits = async (propertyId: string) => {
+    console.log('Fetching units for property:', propertyId);
+    
     const { data, error } = await supabase
       .from('units')
       .select('*')
@@ -85,6 +87,7 @@ export default function PropertyManager({ onRefresh }: PropertyManagerProps) {
     if (error) {
       console.error('Error fetching units:', error);
     } else {
+      console.log('Fetched units:', data);
       setUnits((prev) => ({ ...prev, [propertyId]: data || [] }));
       // 各部屋のテナント情報も取得
       data?.forEach((unit) => fetchTenantInfo(unit.id));
@@ -168,14 +171,21 @@ export default function PropertyManager({ onRefresh }: PropertyManagerProps) {
         return;
       }
 
+      console.log('Unit added successfully:', data);
+      console.log('Adding to property ID:', addingUnitToPropertyId);
+
       // 即座にUIに反映（楽観的更新）
-      setUnits((prev) => ({
-        ...prev,
-        [addingUnitToPropertyId]: [
-          ...(prev[addingUnitToPropertyId] || []),
-          data,
-        ],
-      }));
+      setUnits((prev) => {
+        const newUnits = {
+          ...prev,
+          [addingUnitToPropertyId]: [
+            ...(prev[addingUnitToPropertyId] || []),
+            data,
+          ],
+        };
+        console.log('Updated units state:', newUnits);
+        return newUnits;
+      });
 
       setNewUnitNumber('');
       setAddingUnitToPropertyId(null);
