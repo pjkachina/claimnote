@@ -6,6 +6,8 @@ import { supabase } from '@/lib/supabase';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Trash2 } from 'lucide-react';
 
 interface Claim {
   id: string;
@@ -108,6 +110,22 @@ export default function ClaimList({ onRefresh }: ClaimListProps) {
     }
   };
 
+  const deleteClaim = async (claimId: string) => {
+    if (!confirm('このクレームを削除してもよろしいですか？この操作は元に戻せません。')) {
+      return;
+    }
+    
+    const { error } = await supabase
+      .from('claims')
+      .delete()
+      .eq('id', claimId);
+    
+    if (error) {
+      console.error('Error deleting claim:', error);
+      alert('削除に失敗しました。もう一度お試しください。');
+    }
+  };
+
   const filteredClaims = claims.filter((claim) => {
     const matchesSearch = 
       claim.tenant_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -189,19 +207,29 @@ export default function ClaimList({ onRefresh }: ClaimListProps) {
                 <Badge className={statusColors[claim.status]}>
                   {statusLabels[claim.status]}
                 </Badge>
-                <Select
-                  value={claim.status}
-                  onValueChange={(value) => value && updateStatus(claim.id, value)}
-                >
-                  <SelectTrigger className="w-32">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pending">未対応</SelectItem>
-                    <SelectItem value="in_progress">対応中</SelectItem>
-                    <SelectItem value="completed">完了</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="flex items-center gap-2">
+                  <Select
+                    value={claim.status}
+                    onValueChange={(value) => value && updateStatus(claim.id, value)}
+                  >
+                    <SelectTrigger className="w-32">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pending">未対応</SelectItem>
+                      <SelectItem value="in_progress">対応中</SelectItem>
+                      <SelectItem value="completed">完了</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => deleteClaim(claim.id)}
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </div>
           ))}
