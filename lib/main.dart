@@ -6,6 +6,8 @@ import 'screens/login_screen.dart';
 import 'screens/owner_dashboard_screen.dart';
 import 'screens/tenant_dashboard_screen.dart';
 import 'screens/property_management_screen.dart';
+import 'screens/property_detail_screen.dart';
+import 'models/models.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -63,6 +65,13 @@ final _router = GoRouter(
     GoRoute(
       path: '/property-management',
       builder: (context, state) => const PropertyManagementScreen(),
+    ),
+    GoRoute(
+      path: '/property-detail',
+      builder: (context, state) {
+        final property = state.extra as Property;
+        return PropertyDetailScreen(property: property);
+      },
     ),
   ],
 );

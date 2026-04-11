@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../models/models.dart';
 import '../main.dart';
+import '../services/auth_service.dart';
 
 class PropertyManagementScreen extends ConsumerStatefulWidget {
   const PropertyManagementScreen({super.key});
@@ -144,7 +145,7 @@ class _PropertyManagementScreenState extends ConsumerState<PropertyManagementScr
                                       : null,
                                   trailing: const Icon(Icons.chevron_right),
                                   onTap: () {
-                                    // 詳細画面へ（後で実装）
+                                    context.push('/property-detail', extra: property);
                                   },
                                 ),
                               );
