@@ -143,6 +143,38 @@ open Runner.xcworkspace
 
 4. **画像ストレージ**: Supabase Storageに`claim-images`バケットが必要です
 
+## Web版ビルド（開発・テスト用）
+
+Macがない場合や、開発中の手軽なテストに使用できます。
+
+### ビルド手順
+
+```bash
+# 1. ビルドスクリプト実行
+./build_web.sh
+
+# または手動で
+flutter build web --release
+
+# 2. ローカルサーバー起動
+cd build/web
+python3 -m http.server 8080
+
+# 3. ブラウザでアクセス
+# PC: http://localhost:8080
+# 同じWiFiのスマホ: http://<PCのIPアドレス>:8080
+```
+
+### 注意: Web版の制限
+
+- **カメラ機能**: 制限あり（ファイル選択は可能）
+- **プッシュ通知**: 非対応
+- **ネイティブ共有**: 非対応
+
+UIの確認・API通信・画面遷移はすべてテスト可能です。
+
+---
+
 ## 今後の開発
 
 Flutter環境が整ったら、以下のコマンドで開発を続けてください：
