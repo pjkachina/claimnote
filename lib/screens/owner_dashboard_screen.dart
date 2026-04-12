@@ -101,28 +101,3 @@ class OwnerDashboardScreen extends ConsumerWidget {
     );
   }
 }
-
-class TenantDashboardScreen extends ConsumerWidget {
-  const TenantDashboardScreen({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('ClaimNote'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await ref.read(authProvider.notifier).signOut();
-              context.go('/');
-            },
-          ),
-        ],
-      ),
-      body: const Center(
-        child: Text('テナント画面（準備中）'),
-      ),
-    );
-  }
-}
